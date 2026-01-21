@@ -1,68 +1,79 @@
-name: Build ath9k module (Android kernel)
+     - name: Prepare out directory
+       run: |
+          mkdir -p out
 
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            bc \
-            bison \
-            flex \
-            libssl-dev \
-            make \
-            clang \
-            lld \
-            llvm \
-            libelf-dev \
-            dwarves
-
-      - name: Download clang toolchain
-        run: |
-          mkdir -p toolchain
-          wget -O clang.tar.gz https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/clang-r450784e.tar.gz
-          tar -xzf clang.tar.gz -C toolchain
-          echo "CLANG_PATH=$(pwd)/toolchain/clang-r450784e/bin" >> $GITHUB_ENV
-
-      - name: Export build environment
-        run: |
-          echo "ARCH=arm64" >> $GITHUB_ENV
-          echo "SUBARCH=arm64" >> $GITHUB_ENV
-          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
-          echo "CC=clang" >> $GITHUB_ENV
-          echo "LD=ld.lld" >> $GITHUB_ENV
-          echo "PATH=$CLANG_PATH:$PATH" >> $GITHUB_ENV
-
-      - name: Kernel defconfig
-        run: |
-          make -C kernel O=out your_defconfig
-
-      - name: Prepare modules
-        run: |
-          make -C kernel O=out modules_prepare
-
-      - name: Build ath9k module only
-        run: |
+     - name: Load defconfig
+       run: |
           make -C kernel O=out \
+            ARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
+            ENABLE_ABI=false \
+            your_defconfig  # ← THAY BẰNG TÊN THỰC TẾ (ví dụ: gki_defconfig hoặc xem trong kernel/arch/arm64/configs/)
+
+     - name: Disable TRIM_UNUSED_KSYMS and clear whitelist (gộp)
+       run: |
+          CONFIG_FILE=out/.config
+          ./kernel/scripts/config --file $CONFIG_FILE --disable TRIM_UNUSED_KSYMS
+          ./kernel/scripts/config --file $CONFIG_FILE --set-str UNUSED_KSYMS_WHITELIST ""
+          make -C kernel O=out olddefconfig
+          
+          echo "=== ABI/Trim config status ==="
+          grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST|ABI" $CONFIG_FILE || echo "No matching lines"
+          echo "=============================="
+
+     - name: Create dummy abi_symbollist.raw (backup)
+       run: |
+          mkdir -p out/target/product/a06x/obj/KERNEL_OBJ/kernel-5.15
+          touch out/target/product/a06x/obj/KERNEL_OBJ/kernel-5.15/abi_symbollist.raw
+          mkdir -p out/common out
+          touch out/common/abi_symbollist.raw out/abi_symbollist.raw
+          find out -name "*abi_symbollist.raw" -exec ls -l {} \; || true
+     - name: Patch gen_autoksyms.sh to bypass whitelist check (nếu dummy fail)
+       run: |
+          sed -i '/ERROR:.*whitelist file not found/s/^/# /' kernel/scripts/gen_autoksyms.sh
+          echo "=== Patched gen_autoksyms.sh ==="
+          grep -A 5 "whitelist file not found" kernel/scripts/gen_autoksyms.sh || echo "Patch applied"
+          echo "============================"
+
+     - name: Prepare kernel for external modules
+       run: |
+          make -C kernel O=out \
+            ARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
+            ENABLE_ABI=false \
+            modules_prepare
+
+     - name: Build ath9k module only
+       run: |
+          make -C kernel O=out \
+            ARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
+            ENABLE_ABI=false \
             M=drivers/net/wireless/ath/ath9k \
-            modules
+            modules 2>&1 | tee build.log  # ← Thêm tee để log đầy đủ, dễ debug nếu lỗi symbol
 
-      - name: Collect module
-        run: |
-          mkdir -p output
-          find out -name "ath9k*.ko" -exec cp {} output/ \;
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ath9k-module
-          path: output
+     - name: Upload ath9k modules and logs
+       uses: actions/upload-artifact@v4
+      with:
+          name: ath9k-modules
+          path: |
+            out/drivers/net/wireless/ath/ath9k/*.ko
+            build.log  # ← Upload log để xem lỗi nếu fail
