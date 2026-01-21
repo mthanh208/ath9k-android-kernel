@@ -1,0 +1,53 @@
+name: Android Kernel Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libelf-dev \
+            ccache \
+            wget \
+            git
+
+      - name: Download clang r450784e
+        run: |
+          mkdir -p toolchain
+          cd toolchain
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android13-release/clang-r450784e.tar.gz
+          tar -xzf clang-r450784e.tar.gz
+
+      - name: Setup environment
+        run: |
+          echo "ARCH=arm64" >> $GITHUB_ENV
+          echo "SUBARCH=arm64" >> $GITHUB_ENV
+          echo "PATH=$PWD/toolchain/clang-r450784e/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Kernel build
+        run: |
+          make -C kernel O=out your_defconfig
+          make -C kernel O=out -j$(nproc)
+
+      - name: Upload kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-image
+          path: |
+            kernel/out/arch/arm64/boot/Image
+            kernel/out/arch/arm64/boot/Image.gz
