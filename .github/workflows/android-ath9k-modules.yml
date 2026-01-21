@@ -22,9 +22,15 @@ jobs:
             libssl-dev \
             libelf-dev \
             dwarves \
+            pahole \
+            git \
+            python3 \
+            lz4 \
+            liblz4-tool \
             wget \
             xz-utils \
-            lld
+            lld   # Gói này cài ld.lld từ hệ thống
+
       - name: Download clang r450784e
         run: |
           mkdir -p toolchain
@@ -38,7 +44,7 @@ jobs:
           wget -q https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
           tar -xf arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
 
-      - name: Export toolchain environment
+      - name: Export toolchain environment & Check ld.lld
         run: |
           CLANG=$PWD/toolchain/clang-r450784e/bin
           GCC=$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin
@@ -48,7 +54,17 @@ jobs:
           echo "LLVM_IAS=1" >> $GITHUB_ENV
           echo "CC=clang" >> $GITHUB_ENV
           echo "LD=ld.lld" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
+          echo "CLANG_TRIPLE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
           echo "PATH=$CLANG:$GCC:$PATH" >> $GITHUB_ENV
+
+          # Check ld.lld ngay sau khi PATH cập nhật (gộp debug)
+          echo "=== Checking ld.lld ==="
+          which ld.lld || echo "ERROR: ld.lld NOT FOUND in PATH!"
+          ld.lld --version || echo "ERROR: ld.lld exists but cannot run!"
+          clang --version
+          echo "PATH is: $PATH"
+          echo "===================="
 
       - name: Fix kernel script permissions
         run: |
@@ -66,9 +82,10 @@ jobs:
             LD=ld.lld \
             LLVM=1 \
             LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
             SKIP_ABI_CHECKS=1 \
             IGNORE_ABI_CHECKS=1 \
-            your_defconfig
+            your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
 
       - name: Build ath9k module only
         run: |
@@ -78,6 +95,7 @@ jobs:
             LD=ld.lld \
             LLVM=1 \
             LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
             SKIP_ABI_CHECKS=1 \
             IGNORE_ABI_CHECKS=1 \
             M=drivers/net/wireless/ath/ath9k \
