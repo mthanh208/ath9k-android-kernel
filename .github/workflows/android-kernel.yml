@@ -1,0 +1,38 @@
+name: Build Android Kernel
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    - name: Install deps
+      run: |
+        sudo apt update
+        sudo apt install -y git bc bison flex libssl-dev make \
+        libc6-dev libncurses5-dev libelf-dev wget xz-utils
+
+    - name: Get AOSP Clang 14.0.7
+      run: |
+        mkdir -p toolchain
+        cd toolchain
+        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-13.0.0_r74/clang-r450784e.tar.gz
+        tar -xzf clang-r450784e.tar.gz
+
+    - name: Build kernel
+      run: |
+        export ARCH=arm64
+        export LLVM=1
+        export LLVM_IAS=1
+        export PATH=$PWD/toolchain/clang-r450784e/bin:$PATH
+
+        cd kernel
+        make your_defconfig
+        make -j$(nproc)
