@@ -41,9 +41,9 @@ jobs:
 
       - name: Fix kernel script permissions
         run: |
-          chmod +x kernel/scripts/*.sh
-          chmod +x kernel/scripts/*/*.sh
-
+          chmod +x kernel/scripts/*
+          chmod +x kernel/scripts/*/*
+          chmod +x kernel/scripts/remove-stale-files
       - name: Setup build environment
         run: |
           echo "ARCH=arm64" >> $GITHUB_ENV
