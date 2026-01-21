@@ -15,16 +15,15 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-            bc \
-            bison \
-            flex \
-            libssl-dev \
-            make \
-            clang \
-            lld \
-            llvm \
-            libelf-dev \
-            dwarves
+            bc bison flex libssl-dev make \
+            clang lld llvm \
+            libelf-dev dwarves \
+            gcc-aarch64-linux-gnu
+
+      - name: Fix script permissions
+        run: |
+          chmod +x kernel/scripts/*
+          chmod +x kernel/scripts/**/*
 
       - name: Download clang toolchain
         run: |
@@ -37,9 +36,9 @@ jobs:
         run: |
           echo "ARCH=arm64" >> $GITHUB_ENV
           echo "SUBARCH=arm64" >> $GITHUB_ENV
-          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
           echo "CC=clang" >> $GITHUB_ENV
           echo "LD=ld.lld" >> $GITHUB_ENV
+          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
           echo "PATH=$CLANG_PATH:$PATH" >> $GITHUB_ENV
 
       - name: Kernel defconfig
