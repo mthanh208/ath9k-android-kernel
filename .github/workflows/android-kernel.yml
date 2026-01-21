@@ -19,12 +19,12 @@ jobs:
         sudo apt install -y git bc bison flex libssl-dev make \
         libc6-dev libncurses5-dev libelf-dev wget xz-utils
 
-    - name: Get AOSP Clang 14.0.7
-      run: |
-        mkdir -p toolchain
-        cd toolchain
-        wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/tags/android-13.0.0_r74/clang-r450784e.tar.gz
-        tar -xzf clang-r450784e.tar.gz
+    - name: Download clang
+        run: |
+          mkdir -p toolchain
+          cd toolchain
+          wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/android13-release/clang-r450784e.tar.gz
+          tar -xzf clang-r450784e.tar.gz
 
     - name: Build kernel
       run: |
