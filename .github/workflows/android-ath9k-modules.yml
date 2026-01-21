@@ -38,15 +38,17 @@ jobs:
           wget -q https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
           tar -xf arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
 
-      - name: Export toolchain paths
+      - name: Export toolchain environment
         run: |
+          CLANG=$PWD/toolchain/clang-r450784e/bin
+          GCC=$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin
+
           echo "ARCH=arm64" >> $GITHUB_ENV
           echo "LLVM=1" >> $GITHUB_ENV
           echo "LLVM_IAS=1" >> $GITHUB_ENV
           echo "CC=clang" >> $GITHUB_ENV
-          echo "CLANG_PATH=$PWD/toolchain/clang-r450784e/bin" >> $GITHUB_ENV
-          echo "GCC_PATH=$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin" >> $GITHUB_ENV
-          echo "PATH=$PWD/toolchain/clang-r450784e/bin:$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin:$PATH" >> $GITHUB_ENV
+          echo "LD=ld.lld" >> $GITHUB_ENV
+          echo "PATH=$CLANG:$GCC:$PATH" >> $GITHUB_ENV
 
       - name: Fix kernel script permissions
         run: |
@@ -61,6 +63,7 @@ jobs:
           make -C kernel O=out \
             ARCH=arm64 \
             CC=clang \
+            LD=ld.lld \
             LLVM=1 \
             LLVM_IAS=1 \
             SKIP_ABI_CHECKS=1 \
@@ -72,6 +75,7 @@ jobs:
           make -C kernel O=out \
             ARCH=arm64 \
             CC=clang \
+            LD=ld.lld \
             LLVM=1 \
             LLVM_IAS=1 \
             SKIP_ABI_CHECKS=1 \
