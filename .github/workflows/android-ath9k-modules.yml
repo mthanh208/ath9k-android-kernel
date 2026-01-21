@@ -24,7 +24,7 @@ jobs:
             dwarves \
             wget \
             xz-utils
-            ld.lld
+            
       - name: Download clang r450784e
         run: |
           mkdir -p toolchain
