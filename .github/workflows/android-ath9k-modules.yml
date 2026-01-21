@@ -85,6 +85,7 @@ jobs:
             CROSS_COMPILE=aarch64-none-linux-gnu- \
             SKIP_ABI_CHECKS=1 \
             IGNORE_ABI_CHECKS=1 \
+            ENABLE_ABI=false \
             your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
             
       - name: Prepare kernel for external modules
@@ -97,7 +98,11 @@ jobs:
             LLVM_IAS=1 \
             CROSS_COMPILE=aarch64-none-linux-gnu- \
             SKIP_ABI_CHECKS=1 \
+            ENABLE_ABI=false \
             IGNORE_ABI_CHECKS=1 \
+            SKIP_ABI_CHECKS=1 \
+            ABI_DEFINES=1 \
+            KBUILD_ABI=0 \
             prepare modules_prepare
             
       - name: Build ath9k module only
@@ -111,6 +116,8 @@ jobs:
             CROSS_COMPILE=aarch64-none-linux-gnu- \
             SKIP_ABI_CHECKS=1 \
             IGNORE_ABI_CHECKS=1 \
+            KBUILD_ABI=0 \
+            ENABLE_ABI=false \
             M=drivers/net/wireless/ath/ath9k \
             modules
 
