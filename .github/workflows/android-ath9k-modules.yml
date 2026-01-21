@@ -91,6 +91,17 @@ jobs:
             ENABLE_ABI=false \
             your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
             
+      - name: Disable ABI whitelist check by emptying UNUSED_KSYMS_WHITELIST
+        run: |
+          # Chạy scripts/config để set UNUSED_KSYMS_WHITELIST thành rỗng
+          ./kernel/scripts/config --file out/.config --set-str UNUSED_KSYMS_WHITELIST ""
+          
+          # Update lại config (để apply thay đổi, regenerate autoksyms nếu cần)
+          make -C kernel O=out olddefconfig
+          
+          # Debug: kiểm tra config đã thay đổi chưa
+          grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST" out/.config || echo "No related config lines"
+          
       - name: Disable TRIM_UNUSED_KSYMS to skip abi_symbollist check
         run: |
             sed -i 's/CONFIG_TRIM_UNUSED_KSYMS=y/# CONFIG_TRIM_UNUSED_KSYMS is not set/' out/.config || echo "CONFIG_TRIM_UNUSED_KSYMS not found, already disabled?"    
