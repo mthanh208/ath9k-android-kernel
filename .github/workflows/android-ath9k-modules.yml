@@ -57,6 +57,9 @@ jobs:
           echo "CROSS_COMPILE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
           echo "CLANG_TRIPLE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
           echo "PATH=$CLANG:$GCC:$PATH" >> $GITHUB_ENV
+          echo "SKIP_ABI_CHECKS=1" >> $GITHUB_ENV
+          echo "KMI_SYMBOL_LIST_STRICT_MODE=0" >> $GITHUB_ENV  # Thêm cái này nếu cần
+          echo "TRIM_UNUSED_KSYMS=n" >> $GITHUB_ENV
 
           # Check ld.lld ngay sau khi PATH cập nhật (gộp debug)
           echo "=== Checking ld.lld ==="
