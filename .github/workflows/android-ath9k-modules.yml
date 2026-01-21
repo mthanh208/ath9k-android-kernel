@@ -23,8 +23,8 @@ jobs:
             libelf-dev \
             dwarves \
             wget \
-            xz-utils
-            
+            xz-utils \
+            lld
       - name: Download clang r450784e
         run: |
           mkdir -p toolchain
