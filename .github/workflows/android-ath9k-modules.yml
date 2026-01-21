@@ -1,73 +1,87 @@
-name: Build ath9k module (no ABI)
+name: Build ath9k module (Android kernel)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-ath9k:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y \
-            bc bison flex libssl-dev make \
-            clang lld llvm \
-            libelf-dev dwarves \
-            gcc-aarch64-linux-gnu
+            build-essential \
+            bc \
+            bison \
+            flex \
+            libssl-dev \
+            libelf-dev \
+            dwarves \
+            wget \
+            xz-utils
 
-      - name: Fix permissions
-        run: |
-              chmod +x kernel/scripts/*
-              chmod +x kernel/scripts/**/*.sh
-              chmod +x kernel/scripts/remove-stale-files
-
-      - name: Download clang
+      - name: Download clang r450784e
         run: |
           mkdir -p toolchain
-          wget -O clang.tar.gz https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/clang-r450784e.tar.gz
-          tar -xzf clang.tar.gz -C toolchain
-          echo "CLANG_PATH=$(pwd)/toolchain/clang-r450784e/bin" >> $GITHUB_ENV
+          cd toolchain
+          wget -q https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/clang-r450784e.tar.gz
+          tar -xf clang-r450784e.tar.gz
 
-      - name: Export env
+      - name: Download GNU aarch64 toolchain
+        run: |
+          cd toolchain
+          wget -q https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
+          tar -xf arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
+
+      - name: Export toolchain paths
         run: |
           echo "ARCH=arm64" >> $GITHUB_ENV
-          echo "SUBARCH=arm64" >> $GITHUB_ENV
+          echo "LLVM=1" >> $GITHUB_ENV
+          echo "LLVM_IAS=1" >> $GITHUB_ENV
           echo "CC=clang" >> $GITHUB_ENV
-          echo "LD=ld.lld" >> $GITHUB_ENV
-          echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
-          echo "KBUILD_BUILD_USER=ci" >> $GITHUB_ENV
-          echo "KBUILD_BUILD_HOST=github" >> $GITHUB_ENV
-          echo "KBUILD_ABI=0" >> $GITHUB_ENV
-          echo "PATH=$CLANG_PATH:$PATH" >> $GITHUB_ENV
+          echo "CLANG_PATH=$PWD/toolchain/clang-r450784e/bin" >> $GITHUB_ENV
+          echo "GCC_PATH=$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin" >> $GITHUB_ENV
+          echo "PATH=$PWD/toolchain/clang-r450784e/bin:$PWD/toolchain/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Defconfig
+      - name: Fix kernel script permissions
         run: |
-          make -C kernel O=out your_defconfig
+          find kernel/scripts -type f -exec chmod +x {} \;
 
-      - name: Prepare kernel (no ABI)
+      - name: Prepare out directory
+        run: |
+          mkdir -p out
+
+      - name: Load defconfig
         run: |
           make -C kernel O=out \
-            KBUILD_ABI=0 \
-            prepare
+            ARCH=arm64 \
+            CC=clang \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
+            your_defconfig
 
       - name: Build ath9k module only
         run: |
           make -C kernel O=out \
-            KBUILD_ABI=0 \
+            ARCH=arm64 \
+            CC=clang \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
             M=drivers/net/wireless/ath/ath9k \
             modules
 
-      - name: Collect ko
-        run: |
-          mkdir -p output
-          find out -name "ath9k*.ko" -exec cp {} output/ \;
-
-      - name: Upload
+      - name: Upload ath9k modules
         uses: actions/upload-artifact@v4
         with:
-          name: ath9k-module
-          path: output
+          name: ath9k-modules
+          path: |
+            out/drivers/net/wireless/ath/ath9k/*.ko
