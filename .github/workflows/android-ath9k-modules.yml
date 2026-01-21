@@ -1,4 +1,4 @@
-name: Build ath9k module (Android kernel)
+name: Build ath9k module (no ABI)
 
 on:
   workflow_dispatch:
@@ -8,10 +8,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           sudo apt update
           sudo apt install -y \
@@ -20,47 +19,53 @@ jobs:
             libelf-dev dwarves \
             gcc-aarch64-linux-gnu
 
-      - name: Fix script permissions
+      - name: Fix permissions
         run: |
-          chmod +x kernel/scripts/*
-          chmod +x kernel/scripts/**/*
+          chmod +x kernel/scripts/*.sh
+          chmod +x kernel/scripts/**/*.sh
 
-      - name: Download clang toolchain
+      - name: Download clang
         run: |
           mkdir -p toolchain
           wget -O clang.tar.gz https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/clang-r450784e.tar.gz
           tar -xzf clang.tar.gz -C toolchain
           echo "CLANG_PATH=$(pwd)/toolchain/clang-r450784e/bin" >> $GITHUB_ENV
 
-      - name: Export build environment
+      - name: Export env
         run: |
           echo "ARCH=arm64" >> $GITHUB_ENV
           echo "SUBARCH=arm64" >> $GITHUB_ENV
           echo "CC=clang" >> $GITHUB_ENV
           echo "LD=ld.lld" >> $GITHUB_ENV
           echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+          echo "KBUILD_BUILD_USER=ci" >> $GITHUB_ENV
+          echo "KBUILD_BUILD_HOST=github" >> $GITHUB_ENV
+          echo "KBUILD_ABI=0" >> $GITHUB_ENV
           echo "PATH=$CLANG_PATH:$PATH" >> $GITHUB_ENV
 
-      - name: Kernel defconfig
+      - name: Defconfig
         run: |
           make -C kernel O=out your_defconfig
 
-      - name: Prepare modules
+      - name: Prepare kernel (no ABI)
         run: |
-          make -C kernel O=out modules_prepare
+          make -C kernel O=out \
+            KBUILD_ABI=0 \
+            prepare
 
       - name: Build ath9k module only
         run: |
           make -C kernel O=out \
+            KBUILD_ABI=0 \
             M=drivers/net/wireless/ath/ath9k \
             modules
 
-      - name: Collect module
+      - name: Collect ko
         run: |
           mkdir -p output
           find out -name "ath9k*.ko" -exec cp {} output/ \;
 
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ath9k-module
