@@ -91,6 +91,25 @@ jobs:
             ENABLE_ABI=false \
             your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
             
+      - name: Disable TRIM_UNUSED_KSYMS and clear whitelist
+        run: |
+          # Đảm bảo dùng path đúng đến .config
+          CONFIG_FILE=out/.config
+
+          # Disable TRIM_UNUSED_KSYMS (nếu có thì comment out, hoặc set =n)
+          ./kernel/scripts/config --file $CONFIG_FILE --disable TRIM_UNUSED_KSYMS
+
+          # Clear whitelist để chắc ăn (nếu TRIM vẫn bật thì không check file)
+          ./kernel/scripts/config --file $CONFIG_FILE --set-str UNUSED_KSYMS_WHITELIST ""
+
+          # Apply lại config (regenerate headers nếu cần)
+          make -C kernel O=out olddefconfig
+
+          # Debug: in ra trạng thái config liên quan
+          echo "=== Config ABI/Trim status ==="
+          grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST" $CONFIG_FILE || echo "No matching lines found"
+          echo "==============================" 
+          
       - name: Disable ABI whitelist check by emptying UNUSED_KSYMS_WHITELIST
         run: |
           # Chạy scripts/config để set UNUSED_KSYMS_WHITELIST thành rỗng
@@ -102,10 +121,7 @@ jobs:
           # Debug: kiểm tra config đã thay đổi chưa
           grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST" out/.config || echo "No related config lines"
           
-      - name: Disable TRIM_UNUSED_KSYMS to skip abi_symbollist check
-        run: |
-            sed -i 's/CONFIG_TRIM_UNUSED_KSYMS=y/# CONFIG_TRIM_UNUSED_KSYMS is not set/' out/.config || echo "CONFIG_TRIM_UNUSED_KSYMS not found, already disabled?"    
-            make -C kernel O=out olddefconfig   
+
      
       - name: Prepare kernel for external modules
         run: |
