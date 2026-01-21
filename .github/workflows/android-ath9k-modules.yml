@@ -91,6 +91,11 @@ jobs:
             ENABLE_ABI=false \
             your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
             
+      - name: Disable TRIM_UNUSED_KSYMS to skip abi_symbollist check
+        run: |
+            sed -i 's/CONFIG_TRIM_UNUSED_KSYMS=y/# CONFIG_TRIM_UNUSED_KSYMS is not set/' out/.config || echo "CONFIG_TRIM_UNUSED_KSYMS not found, already disabled?"    
+            make -C kernel O=out olddefconfig   
+     
       - name: Prepare kernel for external modules
         run: |
           make -C kernel O=out \
