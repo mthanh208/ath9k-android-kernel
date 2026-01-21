@@ -91,15 +91,15 @@ jobs:
             ENABLE_ABI=false \
             your_defconfig  # ← THAY BẰNG TÊN THỰC TẾ (ví dụ: gki_defconfig, msm_defconfig, vendor_defconfig, ath9k_defconfig...)
 
-      - name: Disable TRIM_UNUSED_KSYMS and clear whitelist
-        run: |
+       - name: Disable TRIM_UNUSED_KSYMS and unset whitelist
+         run: |
           CONFIG_FILE=out/.config
           ./kernel/scripts/config --file $CONFIG_FILE --disable TRIM_UNUSED_KSYMS
-          ./kernel/scripts/config --file $CONFIG_FILE --set-str UNUSED_KSYMS_WHITELIST ""
+          ./kernel/scripts/config --file $CONFIG_FILE --unset UNUSED_KSYMS_WHITELIST  # <-- Đây là thay đổi chính: unset thay vì set-str ""
           make -C kernel O=out olddefconfig
 
-          echo "=== ABI/Trim config status ==="
-          grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST|ABI" $CONFIG_FILE || echo "No matching lines found"
+          echo "=== ABI/Trim config status (sau unset) ==="
+          grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST|ABI" $CONFIG_FILE || echo "No matching lines found (whitelist unset)"
           echo "=============================="
 
       - name: Create dummy abi_symbollist.raw
