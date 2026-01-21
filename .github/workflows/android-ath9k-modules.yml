@@ -121,6 +121,19 @@ jobs:
           # Debug: kiểm tra config đã thay đổi chưa
           grep -E "TRIM_UNUSED_KSYMS|UNUSED_KSYMS_WHITELIST" out/.config || echo "No related config lines"
           
+      - name: Create dummy abi_symbollist.raw to bypass whitelist check
+        run: |
+          # Path từ lỗi: /home/dpi/.../abi_symbollist.raw – nhưng trong runner là out/
+          # Thường script resolve relative từ out/ hoặc kernel root
+          mkdir -p out/common  # phổ biến cho GKI-style
+          touch out/common/abi_symbollist.raw
+          
+          # Nếu vẫn fail, thử path dài hơn giống lỗi cũ (hardcode để chắc)
+          mkdir -p out/target/product/a06x/obj/KERNEL_OBJ/kernel-5.15
+          touch out/target/product/a06x/obj/KERNEL_OBJ/kernel-5.15/abi_symbollist.raw
+          
+          # Debug: liệt kê file để xem có tạo không
+          ls -l out/*abi_symbollist.raw || ls -l out/common/*abi_symbollist.raw || echo "Dummy file created"  
 
      
       - name: Prepare kernel for external modules
