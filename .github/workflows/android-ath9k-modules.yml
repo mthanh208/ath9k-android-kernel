@@ -21,8 +21,9 @@ jobs:
 
       - name: Fix permissions
         run: |
-          chmod +x kernel/scripts/*.sh
-          chmod +x kernel/scripts/**/*.sh
+              chmod +x kernel/scripts/*
+              chmod +x kernel/scripts/**/*.sh
+              chmod +x kernel/scripts/remove-stale-files
 
       - name: Download clang
         run: |
