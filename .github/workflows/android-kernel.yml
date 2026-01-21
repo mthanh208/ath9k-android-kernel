@@ -1,4 +1,4 @@
-name: Android Kernel Build
+name: Build ATH9K Modules (AR9271)
 
 on:
   push:
@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout kernel source
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           sudo apt update
           sudo apt install -y \
@@ -39,6 +39,11 @@ jobs:
           wget https://github.com/ravindu644/Android-Kernel-Tutorials/releases/download/toolchains/arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
           tar -xf arm-gnu-toolchain-14.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
 
+      - name: Fix kernel script permissions
+        run: |
+          chmod +x kernel/scripts/*.sh
+          chmod +x kernel/scripts/*/*.sh
+
       - name: Setup build environment
         run: |
           echo "ARCH=arm64" >> $GITHUB_ENV
@@ -48,15 +53,21 @@ jobs:
           echo "CROSS_COMPILE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
           echo "CLANG_TRIPLE=aarch64-none-linux-gnu-" >> $GITHUB_ENV
 
-      - name: Kernel build
+      - name: Load defconfig
         run: |
           make -C kernel O=out your_defconfig
-          make -C kernel O=out -j$(nproc)
 
-      - name: Upload kernel Image
+      - name: Prepare kernel for external modules
+        run: |
+          make -C kernel O=out prepare modules_prepare
+
+      - name: Build ATH9K modules (AR9271)
+        run: |
+          make -C kernel O=out M=drivers/net/wireless/ath modules
+
+      - name: Upload ATH9K modules
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-image
+          name: ath9k-ar9271-modules
           path: |
-            kernel/out/arch/arm64/boot/Image
-            kernel/out/arch/arm64/boot/Image.gz
+            kernel/out/drivers/net/wireless/ath/**/*.ko
