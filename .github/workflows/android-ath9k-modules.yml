@@ -86,7 +86,20 @@ jobs:
             SKIP_ABI_CHECKS=1 \
             IGNORE_ABI_CHECKS=1 \
             your_defconfig   # THAY BẰNG TÊN THỰC TẾ, ví dụ: gki_defconfig hoặc ath9k-specific_defconfig
-
+            
+      - name: Prepare kernel for external modules
+        run: |
+          make -C kernel O=out \
+            ARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            LLVM=1 \
+            LLVM_IAS=1 \
+            CROSS_COMPILE=aarch64-none-linux-gnu- \
+            SKIP_ABI_CHECKS=1 \
+            IGNORE_ABI_CHECKS=1 \
+            prepare modules_prepare
+            
       - name: Build ath9k module only
         run: |
           make -C kernel O=out \
